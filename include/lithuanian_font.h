@@ -1,8 +1,7 @@
 /**
- * Lithuanian Bitmap Font Library
- * Column-major, little-endian bitmap format for LED matrix displays
- * Created by Mano (GitHub: YOUR_USERNAME)
- * License: MIT
+ * Lithuanian LED Matrix Font Library
+ * Copyright (c) 2024 @braticks (https://github.com/braticks)
+ * MIT License - see LICENSE file
  */
 
 #ifndef LITHUANIAN_FONT_H
