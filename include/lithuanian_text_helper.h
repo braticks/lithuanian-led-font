@@ -2,125 +2,96 @@
 #define LITHUANIAN_TEXT_HELPER_H
 
 #include "lithuanian_font.h"
-
-typedef struct {
-    int16_t x;
-    int16_t y;
-    uint8_t spacing;
-    uint8_t scale;
-    bool wrap;
-    uint16_t wrapWidth;
-} TextConfig;
-
-typedef void (*SetPixelCallback)(int16_t x, int16_t y, void* userData);
+#include <string>
 
 class LithuanianTextHelper {
 public:
-    // Initialize with default configuration
-    static TextConfig createConfig(int16_t x = 0, int16_t y = 0) {
-        TextConfig config;
-        config.x = x;
-        config.y = y;
-        config.spacing = 1;
-        config.scale = 1;
-        config.wrap = false;
-        config.wrapWidth = 0;
-        return config;
-    }
-
-    // Calculate text width in pixels
-    static uint16_t getTextWidth(const char* text, uint8_t spacing = 1) {
-        uint16_t width = 0;
-        while (*text) {
-            const FontChar* ch = getLithuanianChar(*text);
-            if (ch) {
-                width += ch->width + spacing;
+    static int getLetterIndex(uint8_t c1, uint8_t c2 = 0, uint8_t c3 = 0) {
+        // Single byte characters (ASCII)
+        if (c2 == 0) {
+            switch (c1) {
+                case 'A': return 0;
+                case 'B': return 2;
+                case 'C': return 3;
+                case 'D': return 5;
+                case 'E': return 6;
+                case 'I': return 9;
+                case 'K': return 11;
+                case 'L': return 12;
+                case 'M': return 13;
+                case 'N': return 14;
+                case 'O': return 15;
+                case 'P': return 16;
+                case 'R': return 17;
+                case 'S': return 18;
+                case 'T': return 20;
+                case 'U': return 21;
+                case 'V': return 24;
+                case 'Y': return 25;
+                case 'Z': return 26;
+                case ' ': return 28;
+                // Add numbers
+                case '0': return 29;
+                case '1': return 30;
+                case '2': return 31;
+                case '3': return 32;
+                case '4': return 33;
+                case '5': return 34;
+                case '6': return 35;
+                case '7': return 36;
+                case '8': return 37;
+                case '9': return 38;
+                default: return -1;
             }
-            text++;
         }
-        return width > 0 ? width - spacing : 0;
-    }
-
-    // Render text using callback function
-    static void renderText(const char* text, TextConfig config, 
-                         SetPixelCallback setPixel, void* userData) {
-        int16_t currentX = config.x;
-        int16_t currentY = config.y;
         
-        while (*text) {
-            const FontChar* ch = getLithuanianChar(*text);
-            if (ch) {
-                // Check if we need to wrap
-                if (config.wrap && config.wrapWidth > 0) {
-                    uint16_t nextWidth = ch->width * config.scale + config.spacing;
-                    if (currentX + nextWidth > config.x + config.wrapWidth) {
-                        currentX = config.x;
-                        currentY += 16 * config.scale + config.spacing;
-                    }
-                }
-
-                // Render character
-                renderScaledChar(ch, currentX, currentY, config.scale, 
-                               setPixel, userData);
-                
-                currentX += ch->width * config.scale + config.spacing;
-            }
-            text++;
-        }
-    }
-
-    // Center text horizontally
-    static int16_t getCenteredX(const char* text, uint16_t displayWidth, 
-                               uint8_t spacing = 1) {
-        uint16_t textWidth = getTextWidth(text, spacing);
-        return (displayWidth - textWidth) / 2;
-    }
-
-    // Get text height including wrapping
-    static uint16_t getTextHeight(const char* text, TextConfig config) {
-        if (!config.wrap || config.wrapWidth == 0) {
-            return 16 * config.scale;
-        }
-
-        int16_t currentX = 0;
-        uint16_t lines = 1;
-
-        while (*text) {
-            const FontChar* ch = getLithuanianChar(*text);
-            if (ch) {
-                uint16_t nextWidth = ch->width * config.scale + config.spacing;
-                if (currentX + nextWidth > config.wrapWidth) {
-                    currentX = 0;
-                    lines++;
-                }
-                currentX += nextWidth;
-            }
-            text++;
-        }
-
-        return lines * 16 * config.scale + (lines - 1) * config.spacing;
-    }
-
-private:
-    // Render single character with scaling
-    static void renderScaledChar(const FontChar* ch, int16_t x, int16_t y, 
-                                uint8_t scale, SetPixelCallback setPixel, 
-                                void* userData) {
-        for (int col = 0; col < ch->width; col++) {
-            for (int row = 0; row < ch->height; row++) {
-                uint16_t columnData = ch->data[col * 2] | 
-                                    (ch->data[col * 2 + 1] << 8);
-                if (columnData & (1 << row)) {
-                    // Scale up the pixel
-                    for (int sx = 0; sx < scale; sx++) {
-                        for (int sy = 0; sy < scale; sy++) {
-                            setPixel(x + col * scale + sx, 
-                                   y + row * scale + sy, userData);
-                        }
-                    }
+        // Two byte UTF-8 sequences
+        if (c2 != 0 && c3 == 0) {
+            // Ą = 0xC4 0x84
+            if (c1 == 0xC4) {
+                switch (c2) {
+                    case 0x84: return 1;  // Ą
+                    case 0x8C: return 4;  // Č
+                    case 0x96: return 8;  // Ė
+                    case 0x98: return 7;  // Ę
+                    case 0xAE: return 10; // Į
+                    case 0xA0: return 19; // Š
+                    case 0xB2: return 22; // Ų
+                    case 0xAA: return 23; // Ū
+                    case 0xBD: return 27; // Ž
+                    default: return -1;
                 }
             }
         }
+        
+        return -1;
+    }
+
+    static int getNextCharacter(const char*& text, uint8_t& c1, uint8_t& c2, uint8_t& c3) {
+        c1 = c2 = c3 = 0;
+        
+        if (*text == 0) return 0;
+        
+        c1 = (uint8_t)*text++;
+        
+        // ASCII character
+        if (c1 < 0x80) {
+            return 1;
+        }
+        
+        // UTF-8 sequence
+        if ((c1 & 0xE0) == 0xC0 && *text) {  // 2-byte sequence
+            c2 = (uint8_t)*text++;
+            return 2;
+        }
+        
+        if ((c1 & 0xF0) == 0xE0 && *text && *(text + 1)) {  // 3-byte sequence
+            c2 = (uint8_t)*text++;
+            c3 = (uint8_t)*text++;
+            return 3;
+        }
+        
+        return 1;  // Invalid sequence, skip one byte
     }
 };
 
